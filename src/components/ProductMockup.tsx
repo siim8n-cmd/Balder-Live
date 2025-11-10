@@ -53,7 +53,7 @@ const ProductMockup: React.FC<Props> = ({
       onMouseLeave={handleMouseUp}
     >
       <img
-        src="/balder/tshirt.png"
+        src="/tshirt.png"
         alt="T-shirt mockup"
         className="tshirt-base"
       />
