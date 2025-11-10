@@ -1,0 +1,67 @@
+.mockup-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: auto;
+}
+
+.tshirt-base {
+  width: 100%;
+  display: block;
+}
+
+/* Design placeringer */
+.mockup-image {
+  position: absolute;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  aspect-ratio: 1 / 1;
+  z-index: 2;
+}
+
+.position-center {
+  top: 38%;
+  left: 50%;
+  width: 40%;
+  transform: translate(-50%, -50%);
+}
+
+.position-left-chest {
+  top: 32%;
+  left: 33%;
+  width: 20%;
+  transform: translate(-50%, -50%);
+}
+
+.position-bottom {
+  top: 70%;
+  left: 50%;
+  width: 30%;
+  transform: translate(-50%, -50%);
+}
+
+/* Blend-effekter */
+.blend-none {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+.blend-fade {
+  mask-image: linear-gradient(white 60%, transparent);
+  -webkit-mask-image: linear-gradient(white 60%, transparent);
+}
+
+.blend-gradient {
+  mask-image: radial-gradient(circle, white 60%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle, white 60%, transparent 100%);
+}
+
+.blend-circle {
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.blend-square {
+  border-radius: 10%;
+}
