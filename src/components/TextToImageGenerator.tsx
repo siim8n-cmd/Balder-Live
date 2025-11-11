@@ -112,6 +112,7 @@ const TextToImageGenerator = () => {
         prompt: finalPrompt,
         n: 1,
         size: "1024x1024",
+        quality: "standard",
       }),
     });
 
@@ -322,3 +323,4 @@ const TextToImageGenerator = () => {
 };
 
 export default TextToImageGenerator;
+
