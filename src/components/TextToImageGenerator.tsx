@@ -142,7 +142,7 @@ const TextToImageGenerator = () => {
 
   return (
     <div className="container py-5">
-      <h2 className="text-center mb-4">Coolshirt.dk – Tøj Generator</h2>
+  
       <Row>
         <Col md={6}>
           <Form
@@ -323,4 +323,5 @@ const TextToImageGenerator = () => {
 };
 
 export default TextToImageGenerator;
+
 
