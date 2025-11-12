@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Button,
   Form,
@@ -9,6 +9,8 @@ import {
   InputGroup,
 } from "react-bootstrap";
 import ProductMockup from "./ProductMockup";
+
+const STORE_ORIGIN = "https://coolshirts.dk"; // targetOrigin for secure postMessage
 
 type GeneratedImage = {
   id: string;
@@ -46,6 +48,13 @@ const TextToImageGenerator = () => {
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
 
   const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
+
+  // Tell parent page that the iframe UI is ready for interaction
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.parent?.postMessage({ type: "balder:ready" }, STORE_ORIGIN);
+    }
+  }, []);
 
   const addTagsFromInput = () => {
     const newTags = tagInput
@@ -97,6 +106,9 @@ const TextToImageGenerator = () => {
     if (!subject) return;
     setLoading(true);
 
+    // Inform parent we started work (disable ATC)
+    window.parent?.postMessage({ type: "balder:busy" }, STORE_ORIGIN);
+
     const tagString = tags.join(", ");
     const rawPrompt = `A ${style}, ${mood} artwork for t-shirt print, showing ${subject}. Tags: ${tagString}. High resolution, white background, centered composition. Do not include any t-shirt.`;
     const finalPrompt = await refinePrompt(rawPrompt);
@@ -129,7 +141,20 @@ const TextToImageGenerator = () => {
         },
         ...prev,
       ]);
+
+      // Send the design payload to parent so Shopify can store it as line item properties
+      window.parent?.postMessage(
+        {
+          type: "balder:design",
+          designUrl: imageUrl,
+          prompt: finalPrompt,
+        },
+        STORE_ORIGIN
+      );
     }
+
+    // Signal completion (enable ATC)
+    window.parent?.postMessage({ type: "balder:done" }, STORE_ORIGIN);
 
     setLoading(false);
   };
@@ -142,7 +167,6 @@ const TextToImageGenerator = () => {
 
   return (
     <div className="container py-5">
-  
       <Row>
         <Col md={6}>
           <Form
@@ -323,5 +347,3 @@ const TextToImageGenerator = () => {
 };
 
 export default TextToImageGenerator;
-
-
