@@ -10,6 +10,7 @@ const PromptBuilder: React.FC<Props> = ({ onApply }) => {
   const [finalPrompt, setFinalPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [color, setColor] = useState<'White' | 'Black'>('White');
 
   const buildOptimizedPrompt = async () => {
     if (!subject.trim()) return;
@@ -76,6 +77,31 @@ Undgå alle ekstra ord eller forklaringer. Returnér kun selve prompten.`;
         onChange={(e) => setSubject(e.target.value)}
         disabled={loading}
       />
+
+      <div className="mb-3">
+        <label htmlFor="color" className="form-label">Farve</label>
+        <select
+          id="color"
+          value={color}
+          onChange={(e) => {
+            const newColor = e.target.value as 'White' | 'Black';
+            setColor(newColor);
+      
+            if (window.parent !== window) {
+              window.parent.postMessage(
+                { type: 'variant_change', option: 'Color', value: newColor },
+                '*'
+              );
+            }
+            
+            window.dispatchEvent(new CustomEvent('generator_color_changed', { detail: newColor }));
+          }}
+          className="form-control"
+        >
+          <option value="White">Hvid</option>
+          <option value="Black">Sort</option>
+        </select>
+      </div>
 
       <button
         className="btn btn-success w-100"
