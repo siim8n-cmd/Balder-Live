@@ -3,7 +3,12 @@ import ProductMockup from "./ProductMockup";
 import { Button } from "react-bootstrap";
 
 type Props = {
-  images: { id: string; url: string; position: "center" | "left-chest" | "bottom" }[];
+  images: { 
+    id: string; 
+    url: string; 
+    position: "center" | "left-chest" | "bottom";
+    blend: "fade" | "gradient" | "circle" | "square" | "none";
+  }[];
   onDelete: (id: string) => void;
 };
 
@@ -22,6 +27,8 @@ const GeneratedImagesGallery: React.FC<Props> = ({ images, onDelete }) => {
                   product="tshirt"
                   imageUrl={image.url}
                   position={image.position}
+                  blendStyle={image.blend}
+                  variant="White"
                 />
               </div>
               <div className="card-footer text-center">
