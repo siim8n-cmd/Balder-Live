@@ -53,36 +53,34 @@ const TextToImageGenerator = () => {
 
   const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
- useEffect(() => {
-  // Listen for messages from Shopify
-  const handleMessage = (event: MessageEvent) => {
-    if (event.origin !== STORE_ORIGIN) return;
-    
-    // Receive variants from Shopify (sent via postMessage)
-    if (event.data.type === 'shopify:variants' && event.data.variants) {
-      console.log("Received variants from Shopify:", event.data.variants);
-      setShopifyVariants(event.data.variants);
+  useEffect(() => {
+    // Listen for messages from Shopify
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== STORE_ORIGIN) return;
+      
+      // Receive variants from Shopify (sent via postMessage)
+      if (event.data.type === 'shopify:variants' && event.data.variants) {
+        console.log("Received variants from Shopify:", event.data.variants);
+        setShopifyVariants(event.data.variants);
+      }
+      
+      // Receive size changes from Shopify dropdown
+      if (event.data.type === 'shopify:sizeChange') {
+        console.log("Size changed to:", event.data.size);
+        setCurrentSize(event.data.size);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    // Tell Shopify we're ready
+    if (typeof window !== "undefined") {
+      window.parent?.postMessage({ type: "balder:ready" }, STORE_ORIGIN);
     }
-    
-    // Receive size changes from Shopify dropdown
-    if (event.data.type === 'shopify:sizeChange') {
-      console.log("Size changed to:", event.data.size);
-      setCurrentSize(event.data.size);
-    }
-  };
 
-  window.addEventListener('message', handleMessage);
-
-  // Tell Shopify we're ready
-  if (typeof window !== "undefined") {
-    window.parent?.postMessage({ type: "balder:ready" }, STORE_ORIGIN);
-  }
-
-  return () => {
-    window.removeEventListener('message', handleMessage);
-  };
-}, []);
-
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
 
   // Find variant ID based on color from tool + size from Shopify
@@ -404,4 +402,3 @@ const TextToImageGenerator = () => {
 };
 
 export default TextToImageGenerator;
-
