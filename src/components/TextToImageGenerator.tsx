@@ -42,8 +42,8 @@ const TextToImageGenerator = () => {
   const [style, setStyle] = useState("realistic");
   const [mood, setMood] = useState("cool");
   const [selectedVariant, setSelectedVariant] = useState<TShirtVariant>("White");
-  const [position] = useState<GeneratedImage["position"]>("center"); // Hidden but kept for backend
-  const [blend] = useState<GeneratedImage["blend"]>("fade"); // Hidden but kept for backend
+  const [position] = useState<GeneratedImage["position"]>("center");
+  const [blend] = useState<GeneratedImage["blend"]>("fade");
   const [loading, setLoading] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -59,7 +59,6 @@ const TextToImageGenerator = () => {
 
   const handleVariantChange = (variant: TShirtVariant) => {
     setSelectedVariant(variant);
-    // Notify Shopify parent to change the product variant
     if (window.parent !== window) {
       window.parent.postMessage(
         {
@@ -189,7 +188,6 @@ const TextToImageGenerator = () => {
               generateImage();
             }}
           >
-            {/* VARIANT SELECTOR - NEW */}
             <Form.Group className="mb-4">
               <Form.Label style={{ fontWeight: "600" }}>👕 Vælg T-shirt farve</Form.Label>
               <div className="d-flex gap-2">
@@ -246,8 +244,6 @@ const TextToImageGenerator = () => {
                 </Form.Select>
               </Col>
             </Row>
-
-            {/* PLACERING AND OVERGANG FIELDS REMOVED - kept as state for backend compatibility */}
 
             <Form.Label>🏷️ Tilføj tags</Form.Label>
             <InputGroup className="mb-3">
