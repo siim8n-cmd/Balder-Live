@@ -10,7 +10,7 @@ import {
 } from "react-bootstrap";
 import ProductMockup from "./ProductMockup";
 
-const STORE_ORIGIN = "https://coolshirts.dk"; // targetOrigin for secure postMessage
+const STORE_ORIGIN = "https://coolshirts.dk";
 
 type GeneratedImage = {
   id: string;
@@ -18,6 +18,8 @@ type GeneratedImage = {
   position: "center" | "left-chest" | "bottom";
   blend: "fade" | "gradient" | "circle" | "square" | "none";
 };
+
+type TShirtVariant = "White" | "Black";
 
 const popularTags = [
   "retro",
@@ -39,9 +41,9 @@ const TextToImageGenerator = () => {
   const [subject, setSubject] = useState("");
   const [style, setStyle] = useState("realistic");
   const [mood, setMood] = useState("cool");
-  const [position, setPosition] =
-    useState<GeneratedImage["position"]>("center");
-  const [blend, setBlend] = useState<GeneratedImage["blend"]>("fade");
+  const [selectedVariant, setSelectedVariant] = useState<TShirtVariant>("White");
+  const [position] = useState<GeneratedImage["position"]>("center"); // Hidden but kept for backend
+  const [blend] = useState<GeneratedImage["blend"]>("fade"); // Hidden but kept for backend
   const [loading, setLoading] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -49,12 +51,26 @@ const TextToImageGenerator = () => {
 
   const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
-  // Tell parent page that the iframe UI is ready for interaction
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.parent?.postMessage({ type: "balder:ready" }, STORE_ORIGIN);
     }
   }, []);
+
+  const handleVariantChange = (variant: TShirtVariant) => {
+    setSelectedVariant(variant);
+    // Notify Shopify parent to change the product variant
+    if (window.parent !== window) {
+      window.parent.postMessage(
+        {
+          type: "variant_change",
+          option: "Farve",
+          value: variant === "White" ? "Hvid" : "Sort",
+        },
+        STORE_ORIGIN
+      );
+    }
+  };
 
   const addTagsFromInput = () => {
     const newTags = tagInput
@@ -106,7 +122,6 @@ const TextToImageGenerator = () => {
     if (!subject) return;
     setLoading(true);
 
-    // Inform parent we started work (disable ATC)
     window.parent?.postMessage({ type: "balder:busy" }, STORE_ORIGIN);
 
     const tagString = tags.join(", ");
@@ -142,18 +157,17 @@ const TextToImageGenerator = () => {
         ...prev,
       ]);
 
-      // Send the design payload to parent so Shopify can store it as line item properties
       window.parent?.postMessage(
         {
           type: "balder:design",
           designUrl: imageUrl,
           prompt: finalPrompt,
+          variant: selectedVariant,
         },
         STORE_ORIGIN
       );
     }
 
-    // Signal completion (enable ATC)
     window.parent?.postMessage({ type: "balder:done" }, STORE_ORIGIN);
 
     setLoading(false);
@@ -175,6 +189,27 @@ const TextToImageGenerator = () => {
               generateImage();
             }}
           >
+            {/* VARIANT SELECTOR - NEW */}
+            <Form.Group className="mb-4">
+              <Form.Label style={{ fontWeight: "600" }}>👕 Vælg T-shirt farve</Form.Label>
+              <div className="d-flex gap-2">
+                <Button
+                  variant={selectedVariant === "White" ? "dark" : "outline-secondary"}
+                  onClick={() => handleVariantChange("White")}
+                  style={{ flex: 1, borderWidth: "2px" }}
+                >
+                  ⚪ Hvid
+                </Button>
+                <Button
+                  variant={selectedVariant === "Black" ? "dark" : "outline-secondary"}
+                  onClick={() => handleVariantChange("Black")}
+                  style={{ flex: 1, borderWidth: "2px" }}
+                >
+                  ⚫ Sort
+                </Button>
+              </div>
+            </Form.Group>
+
             <Form.Group className="mb-3">
               <Form.Label>🎯 Motiv / Idé</Form.Label>
               <Form.Control
@@ -212,36 +247,7 @@ const TextToImageGenerator = () => {
               </Col>
             </Row>
 
-            <Row className="mb-3">
-              <Col>
-                <Form.Label>📍 Placering</Form.Label>
-                <Form.Select
-                  value={position}
-                  onChange={(e) =>
-                    setPosition(e.target.value as GeneratedImage["position"])
-                  }
-                >
-                  <option value="center">Center</option>
-                  <option value="left-chest">Venstre bryst</option>
-                  <option value="bottom">Nederst</option>
-                </Form.Select>
-              </Col>
-              <Col>
-                <Form.Label>🌀 Overgang</Form.Label>
-                <Form.Select
-                  value={blend}
-                  onChange={(e) =>
-                    setBlend(e.target.value as GeneratedImage["blend"])
-                  }
-                >
-                  <option value="fade">Blød fade</option>
-                  <option value="gradient">Gradient top-ned</option>
-                  <option value="circle">Cirkulær</option>
-                  <option value="square">Firkantet fade</option>
-                  <option value="none">Ingen</option>
-                </Form.Select>
-              </Col>
-            </Row>
+            {/* PLACERING AND OVERGANG FIELDS REMOVED - kept as state for backend compatibility */}
 
             <Form.Label>🏷️ Tilføj tags</Form.Label>
             <InputGroup className="mb-3">
@@ -311,6 +317,7 @@ const TextToImageGenerator = () => {
             product="tshirt"
             position={position}
             blendStyle={blend}
+            variant={selectedVariant}
           />
         </Col>
       </Row>
@@ -327,6 +334,7 @@ const TextToImageGenerator = () => {
                     product="tshirt"
                     position={image.position}
                     blendStyle={image.blend}
+                    variant={selectedVariant}
                   />
                   <Button
                     variant="danger"
