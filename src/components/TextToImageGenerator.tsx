@@ -42,6 +42,8 @@ const TextToImageGenerator = () => {
   const [style, setStyle] = useState("realistic");
   const [mood, setMood] = useState("cool");
   const [selectedVariant, setSelectedVariant] = useState<TShirtVariant>("White");
+  const [currentSize, setCurrentSize] = useState<string>("");
+  const [shopifyVariants, setShopifyVariants] = useState<any[]>([]);
   const [position] = useState<GeneratedImage["position"]>("center");
   const [blend] = useState<GeneratedImage["blend"]>("fade");
   const [loading, setLoading] = useState(false);
@@ -52,23 +54,62 @@ const TextToImageGenerator = () => {
   const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
   useEffect(() => {
+    // Get variants from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const variantsParam = urlParams.get('variants');
+    
+    if (variantsParam) {
+      try {
+        const decoded = decodeURIComponent(variantsParam);
+        const parsed = JSON.parse(decoded);
+        setShopifyVariants(parsed);
+        console.log("Loaded variants:", parsed);
+      } catch (e) {
+        console.error('Failed to parse variants:', e);
+      }
+    }
+
+    // Listen for size changes from Shopify
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== STORE_ORIGIN) return;
+      
+      if (event.data.type === 'shopify:sizeChange') {
+        console.log("Size changed to:", event.data.size);
+        setCurrentSize(event.data.size);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
     if (typeof window !== "undefined") {
       window.parent?.postMessage({ type: "balder:ready" }, STORE_ORIGIN);
     }
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
+
+  // Find variant ID based on color from tool + size from Shopify
+  const getVariantId = (color: TShirtVariant, size: string) => {
+    const colorMap: { [key: string]: string } = {
+      "White": "Hvid",
+      "Black": "Sort"
+    };
+    
+    const shopifyColor = colorMap[color];
+    
+    const variant = shopifyVariants.find((v: any) => 
+      v.option1 === shopifyColor && v.option2 === size
+    );
+    
+    console.log(`Looking for: ${shopifyColor} + ${size}`, variant);
+    return variant?.id || null;
+  };
 
   const handleVariantChange = (variant: TShirtVariant) => {
     setSelectedVariant(variant);
-    if (window.parent !== window) {
-      window.parent.postMessage(
-        {
-          type: "variant_change",
-          option: "Farve",
-          value: variant === "White" ? "Hvid" : "Sort",
-        },
-        STORE_ORIGIN
-      );
-    }
+    console.log(`Color changed to: ${variant}`);
   };
 
   const addTagsFromInput = () => {
@@ -119,6 +160,12 @@ const TextToImageGenerator = () => {
 
   const generateImage = async () => {
     if (!subject) return;
+    
+    if (!currentSize) {
+      alert("Vælg venligst en størrelse først!");
+      return;
+    }
+
     setLoading(true);
 
     window.parent?.postMessage({ type: "balder:busy" }, STORE_ORIGIN);
@@ -156,12 +203,18 @@ const TextToImageGenerator = () => {
         ...prev,
       ]);
 
+      // Get variant ID: COLOR from tool + SIZE from Shopify
+      const variantId = getVariantId(selectedVariant, currentSize);
+      
+      console.log(`Sending design with variant: ${selectedVariant} + ${currentSize} = ${variantId}`);
+
+      // Send design with variant ID
       window.parent?.postMessage(
         {
           type: "balder:design",
           designUrl: imageUrl,
           prompt: finalPrompt,
-          variant: selectedVariant,
+          variantId: variantId ? String(variantId) : '',
         },
         STORE_ORIGIN
       );
@@ -206,6 +259,11 @@ const TextToImageGenerator = () => {
                   ⚫ Sort
                 </Button>
               </div>
+              {currentSize && (
+                <small className="text-muted mt-2 d-block">
+                  Valgt størrelse: {currentSize}
+                </small>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-3">
