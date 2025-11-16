@@ -1,67 +1,52 @@
-.mockup-wrapper {
+.mockup-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.variant-selectors {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.variant-selectors button {
+  padding: 10px 20px;
+  border: 2px solid #ccc;
+  background-color: #fff;
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.variant-selectors button.active {
+  border-color: #000;
+  background-color: #000;
+  color: #fff;
+}
+
+.tshirt-mockup-wrapper {
   position: relative;
   width: 100%;
-  max-width: 400px;
-  margin: auto;
+  max-width: 500px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.tshirt-base {
+.tshirt-base-image {
   width: 100%;
-  display: block;
+  height: auto;
 }
 
-/* Design placeringer */
-.mockup-image {
+.generated-design-overlay {
   position: absolute;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  aspect-ratio: 1 / 1;
-  z-index: 2;
-}
-
-.position-center {
-  top: 38%;
+  width: 35%;
+  top: 50%;
   left: 50%;
-  width: 40%;
   transform: translate(-50%, -50%);
-}
-
-.position-left-chest {
-  top: 32%;
-  left: 33%;
-  width: 20%;
-  transform: translate(-50%, -50%);
-}
-
-.position-bottom {
-  top: 70%;
-  left: 50%;
-  width: 30%;
-  transform: translate(-50%, -50%);
-}
-
-/* Blend-effekter */
-.blend-none {
-  mask-image: none;
-  -webkit-mask-image: none;
-}
-
-.blend-fade {
-  mask-image: linear-gradient(white 60%, transparent);
-  -webkit-mask-image: linear-gradient(white 60%, transparent);
-}
-
-.blend-gradient {
-  mask-image: radial-gradient(circle, white 60%, transparent 100%);
-  -webkit-mask-image: radial-gradient(circle, white 60%, transparent 100%);
-}
-
-.blend-circle {
-  border-radius: 50%;
-  overflow: hidden;
-}
-
-.blend-square {
-  border-radius: 10%;
+  pointer-events: none;
 }
