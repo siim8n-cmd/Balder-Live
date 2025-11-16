@@ -53,41 +53,36 @@ const TextToImageGenerator = () => {
 
   const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
-  useEffect(() => {
-    // Get variants from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const variantsParam = urlParams.get('variants');
+ useEffect(() => {
+  // Listen for messages from Shopify
+  const handleMessage = (event: MessageEvent) => {
+    if (event.origin !== STORE_ORIGIN) return;
     
-    if (variantsParam) {
-      try {
-        const decoded = decodeURIComponent(variantsParam);
-        const parsed = JSON.parse(decoded);
-        setShopifyVariants(parsed);
-        console.log("Loaded variants:", parsed);
-      } catch (e) {
-        console.error('Failed to parse variants:', e);
-      }
+    // Receive variants from Shopify (sent via postMessage)
+    if (event.data.type === 'shopify:variants' && event.data.variants) {
+      console.log("Received variants from Shopify:", event.data.variants);
+      setShopifyVariants(event.data.variants);
     }
-
-    // Listen for size changes from Shopify
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== STORE_ORIGIN) return;
-      
-      if (event.data.type === 'shopify:sizeChange') {
-        console.log("Size changed to:", event.data.size);
-        setCurrentSize(event.data.size);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-
-    if (typeof window !== "undefined") {
-      window.parent?.postMessage({ type: "balder:ready" }, STORE_ORIGIN);
+    
+    // Receive size changes from Shopify dropdown
+    if (event.data.type === 'shopify:sizeChange') {
+      console.log("Size changed to:", event.data.size);
+      setCurrentSize(event.data.size);
     }
+  };
 
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
+  window.addEventListener('message', handleMessage);
+
+  // Tell Shopify we're ready
+  if (typeof window !== "undefined") {
+    window.parent?.postMessage({ type: "balder:ready" }, STORE_ORIGIN);
+  }
+
+  return () => {
+    window.removeEventListener('message', handleMessage);
+  };
+}, []);
+
   }, []);
 
   // Find variant ID based on color from tool + size from Shopify
@@ -409,3 +404,4 @@ const TextToImageGenerator = () => {
 };
 
 export default TextToImageGenerator;
+
