@@ -1,61 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import './ProductMockup.css';
 
-type Variant = 'White' | 'Black';
+type ProductMockupProps = {
+  imageUrl?: string;
+  product: 'tshirt';
+  position: 'center' | 'left-chest' | 'bottom';
+  blendStyle: 'fade' | 'gradient' | 'circle' | 'square' | 'none';
+  variant?: 'White' | 'Black';
+};
 
-const ProductMockup: React.FC = () => {
-  const [selectedVariant, setSelectedVariant] = useState<Variant>('White');
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-
-  const handleVariantChange = (variant: Variant) => {
-    setSelectedVariant(variant);
-    if (window.parent !== window) {
-      window.parent.postMessage({
-        type: 'variant_change',
-        option: 'Color',
-        value: variant,
-      }, '*');
-    }
-  };
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === 'design_generated' && event.data.imageUrl) {
-        setGeneratedImage(event.data.imageUrl);
-      }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => {
-      window.removeEventListener('message', handleMessage);
-    };
-  }, []);
+const ProductMockup: React.FC<ProductMockupProps> = ({
+  imageUrl,
+  variant = 'White',
+}) => {
+  const mockupSrc = variant === 'Black' 
+    ? '/black-tshirt-mockup.png' 
+    : '/white-tshirt-mockup.png';
 
   return (
     <div className="mockup-container">
-      <div className="variant-selectors">
-        <button
-          className={selectedVariant === 'White' ? 'active' : ''}
-          onClick={() => handleVariantChange('White')}
-        >
-          White
-        </button>
-        <button
-          className={selectedVariant === 'Black' ? 'active' : ''}
-          onClick={() => handleVariantChange('Black')}
-        >
-          Black
-        </button>
-      </div>
-
       <div className="tshirt-mockup-wrapper">
         <img
-          src={selectedVariant === 'Black' ? '/black-tshirt-mockup.png' : '/white-tshirt-mockup.png'}
-          alt="T-shirt mockup"
+          src={mockupSrc}
+          alt={`${variant} t-shirt mockup`}
           className="tshirt-base-image"
         />
-        {generatedImage && (
+        {imageUrl && (
           <img
-            src={generatedImage}
+            src={imageUrl}
             alt="Generated AI design"
             className="generated-design-overlay"
           />
