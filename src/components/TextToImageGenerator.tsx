@@ -65,8 +65,17 @@ const TextToImageGenerator = () => {
       }
       
       // Receive size changes from Shopify dropdown
-      if (event.data.type === 'shopify:sizeChange') {
+      if (event.data.type === 'shopify:variantChange') {
         console.log("Size changed to:", event.data.size);
+
+// Also send the variant ID back to Shopify immediately
+const variantId = getVariantId(selectedVariant, event.data.size);
+if (variantId) {
+  window.parent?.postMessage(
+    { type: 'balder:variant', variantId: String(variantId) },
+    STORE_ORIGIN
+  );
+}
         setCurrentSize(event.data.size);
       }
     };
@@ -402,3 +411,4 @@ const TextToImageGenerator = () => {
 };
 
 export default TextToImageGenerator;
+
