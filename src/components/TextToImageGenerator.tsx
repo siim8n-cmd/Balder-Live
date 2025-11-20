@@ -50,6 +50,8 @@ const TextToImageGenerator = () => {
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
+  const [currentDesignUrl, setCurrentDesignUrl] = useState("");
+  const [currentPrompt, setCurrentPrompt] = useState("");
 
   const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
@@ -90,42 +92,37 @@ const TextToImageGenerator = () => {
     return variant?.id || null;
   };
 
+  const addToCart = () => {
+    if (!currentSize || !currentDesignUrl) {
+      alert("Generer først et design og vælg en størrelse!");
+      return;
+    }
+
+    const variantId = getVariantId(selectedVariant, currentSize);
+    
+    if (!variantId) {
+      alert("Kunne ikke finde variant. Prøv igen.");
+      return;
+    }
+
+    const params = new URLSearchParams({
+      id: String(variantId),
+      quantity: "1",
+      "properties[Design URL]": currentDesignUrl,
+      "properties[Prompt]": currentPrompt,
+    });
+
+    window.parent.location.href = `${STORE_ORIGIN}/cart/add?${params.toString()}`;
+  };
+
   const handleVariantChange = (variant: TShirtVariant) => {
     setSelectedVariant(variant);
     console.log(`Color changed to: ${variant}`);
-    
-    const colorMap: { [key: string]: string } = {
-      "White": "Hvid",
-      "Black": "Sort"
-    };
-    
-    window.parent?.postMessage(
-      { type: "balder:color", color: colorMap[variant] },
-      STORE_ORIGIN
-    );
-
-    if (currentSize) {
-      const variantId = getVariantId(variant, currentSize);
-      if (variantId) {
-        window.parent?.postMessage(
-          { type: 'balder:variant', variantId: String(variantId) },
-          STORE_ORIGIN
-        );
-      }
-    }
   };
 
   const handleSizeChange = (size: string) => {
     setCurrentSize(size);
     console.log(`Size changed to: ${size}`);
-    
-    const variantId = getVariantId(selectedVariant, size);
-    if (variantId) {
-      window.parent?.postMessage(
-        { type: 'balder:variant', variantId: String(variantId) },
-        STORE_ORIGIN
-      );
-    }
   };
 
   const addTagsFromInput = () => {
@@ -184,8 +181,6 @@ const TextToImageGenerator = () => {
 
     setLoading(true);
 
-    window.parent?.postMessage({ type: "balder:busy" }, STORE_ORIGIN);
-
     const tagString = tags.join(", ");
     const rawPrompt = `A ${style}, ${mood} artwork for t-shirt print, showing ${subject}. Tags: ${tagString}. High resolution, white background, centered composition. Do not include any t-shirt.`;
     const finalPrompt = await refinePrompt(rawPrompt);
@@ -209,6 +204,9 @@ const TextToImageGenerator = () => {
     const imageUrl = data.data?.[0]?.url;
 
     if (imageUrl) {
+      setCurrentDesignUrl(imageUrl);
+      setCurrentPrompt(finalPrompt);
+      
       setGeneratedImages((prev) => [
         {
           id: crypto.randomUUID(),
@@ -218,23 +216,7 @@ const TextToImageGenerator = () => {
         },
         ...prev,
       ]);
-
-      const variantId = getVariantId(selectedVariant, currentSize);
-      
-      console.log(`Sending design with variant: ${selectedVariant} + ${currentSize} = ${variantId}`);
-
-      window.parent?.postMessage(
-        {
-          type: "balder:design",
-          designUrl: imageUrl,
-          prompt: finalPrompt,
-          variantId: variantId ? String(variantId) : '',
-        },
-        STORE_ORIGIN
-      );
     }
-
-    window.parent?.postMessage({ type: "balder:done" }, STORE_ORIGIN);
 
     setLoading(false);
   };
@@ -382,7 +364,7 @@ const TextToImageGenerator = () => {
               ))}
             </div>
 
-            <div className="d-grid">
+            <div className="d-grid gap-2">
               <Button
                 variant="success"
                 onClick={generateImage}
@@ -394,6 +376,17 @@ const TextToImageGenerator = () => {
                   "⚡ Generér design"
                 )}
               </Button>
+
+              {currentDesignUrl && (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={addToCart}
+                  disabled={!currentSize}
+                >
+                  🛒 Læg i indkøbskurv
+                </Button>
+              )}
             </div>
           </Form>
         </Col>
