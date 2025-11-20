@@ -54,35 +54,17 @@ const TextToImageGenerator = () => {
   const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
   useEffect(() => {
-    // Listen for messages from Shopify
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== STORE_ORIGIN) return;
       
-      // Receive variants from Shopify (sent via postMessage)
       if (event.data.type === 'shopify:variants' && event.data.variants) {
         console.log("Received variants from Shopify:", event.data.variants);
         setShopifyVariants(event.data.variants);
-      }
-      
-      // Receive size changes from Shopify dropdown
-      if (event.data.type === 'shopify:variantChange') {
-        console.log("Size changed to:", event.data.size);
-
-// Also send the variant ID back to Shopify immediately
-const variantId = getVariantId(selectedVariant, event.data.size);
-if (variantId) {
-  window.parent?.postMessage(
-    { type: 'balder:variant', variantId: String(variantId) },
-    STORE_ORIGIN
-  );
-}
-        setCurrentSize(event.data.size);
       }
     };
 
     window.addEventListener('message', handleMessage);
 
-    // Tell Shopify we're ready
     if (typeof window !== "undefined") {
       window.parent?.postMessage({ type: "balder:ready" }, STORE_ORIGIN);
     }
@@ -92,7 +74,6 @@ if (variantId) {
     };
   }, []);
 
-  // Find variant ID based on color from tool + size from Shopify
   const getVariantId = (color: TShirtVariant, size: string) => {
     const colorMap: { [key: string]: string } = {
       "White": "Hvid",
@@ -110,21 +91,42 @@ if (variantId) {
   };
 
   const handleVariantChange = (variant: TShirtVariant) => {
-  setSelectedVariant(variant);
-  console.log(`Color changed to: ${variant}`);
-  
-  // Map to Shopify color names
-  const colorMap: { [key: string]: string } = {
-    "White": "Hvid",
-    "Black": "Sort"
+    setSelectedVariant(variant);
+    console.log(`Color changed to: ${variant}`);
+    
+    const colorMap: { [key: string]: string } = {
+      "White": "Hvid",
+      "Black": "Sort"
+    };
+    
+    window.parent?.postMessage(
+      { type: "balder:color", color: colorMap[variant] },
+      STORE_ORIGIN
+    );
+
+    if (currentSize) {
+      const variantId = getVariantId(variant, currentSize);
+      if (variantId) {
+        window.parent?.postMessage(
+          { type: 'balder:variant', variantId: String(variantId) },
+          STORE_ORIGIN
+        );
+      }
+    }
   };
-  
-  // Send color to Shopify
-  window.parent?.postMessage(
-    { type: "balder:color", color: colorMap[variant] },
-    STORE_ORIGIN
-  );
-};
+
+  const handleSizeChange = (size: string) => {
+    setCurrentSize(size);
+    console.log(`Size changed to: ${size}`);
+    
+    const variantId = getVariantId(selectedVariant, size);
+    if (variantId) {
+      window.parent?.postMessage(
+        { type: 'balder:variant', variantId: String(variantId) },
+        STORE_ORIGIN
+      );
+    }
+  };
 
   const addTagsFromInput = () => {
     const newTags = tagInput
@@ -217,12 +219,10 @@ if (variantId) {
         ...prev,
       ]);
 
-      // Get variant ID: COLOR from tool + SIZE from Shopify
       const variantId = getVariantId(selectedVariant, currentSize);
       
       console.log(`Sending design with variant: ${selectedVariant} + ${currentSize} = ${variantId}`);
 
-      // Send design with variant ID
       window.parent?.postMessage(
         {
           type: "balder:design",
@@ -273,11 +273,30 @@ if (variantId) {
                   ⚫ Sort
                 </Button>
               </div>
-              {currentSize && (
-                <small className="text-muted mt-2 d-block">
-                  Valgt størrelse: {currentSize}
-                </small>
-              )}
+            </Form.Group>
+
+            <Form.Group className="mb-4">
+              <Form.Label style={{ fontWeight: "600" }}>📏 Vælg størrelse</Form.Label>
+              <Form.Select
+                value={currentSize}
+                onChange={(e) => handleSizeChange(e.target.value)}
+                style={{ fontWeight: "500" }}
+              >
+                <option value="">Vælg størrelse...</option>
+                <option value="3/4 år">3/4 år</option>
+                <option value="5/6 år">5/6 år</option>
+                <option value="7/8 år">7/8 år</option>
+                <option value="9/11 år">9/11 år</option>
+                <option value="12/14 år">12/14 år</option>
+                <option value="S">S</option>
+                <option value="M">M</option>
+                <option value="L">L</option>
+                <option value="XL">XL</option>
+                <option value="2XL">2XL</option>
+                <option value="3XL">3XL</option>
+                <option value="4XL">4XL</option>
+                <option value="5XL">5XL</option>
+              </Form.Select>
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -367,7 +386,7 @@ if (variantId) {
               <Button
                 variant="success"
                 onClick={generateImage}
-                disabled={loading || !subject}
+                disabled={loading || !subject || !currentSize}
               >
                 {loading ? (
                   <Spinner size="sm" animation="border" />
@@ -423,5 +442,3 @@ if (variantId) {
 };
 
 export default TextToImageGenerator;
-
-
