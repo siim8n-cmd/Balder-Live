@@ -110,9 +110,21 @@ if (variantId) {
   };
 
   const handleVariantChange = (variant: TShirtVariant) => {
-    setSelectedVariant(variant);
-    console.log(`Color changed to: ${variant}`);
+  setSelectedVariant(variant);
+  console.log(`Color changed to: ${variant}`);
+  
+  // Map to Shopify color names
+  const colorMap: { [key: string]: string } = {
+    "White": "Hvid",
+    "Black": "Sort"
   };
+  
+  // Send color to Shopify
+  window.parent?.postMessage(
+    { type: "balder:color", color: colorMap[variant] },
+    STORE_ORIGIN
+  );
+};
 
   const addTagsFromInput = () => {
     const newTags = tagInput
@@ -411,4 +423,5 @@ if (variantId) {
 };
 
 export default TextToImageGenerator;
+
 
