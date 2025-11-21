@@ -7,6 +7,7 @@ import {
   Spinner,
   Badge,
   InputGroup,
+  Alert,
 } from "react-bootstrap";
 import ProductMockup from "./ProductMockup";
 
@@ -52,6 +53,9 @@ const TextToImageGenerator = () => {
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [currentDesignUrl, setCurrentDesignUrl] = useState("");
   const [currentPrompt, setCurrentPrompt] = useState("");
+  const [attemptCount, setAttemptCount] = useState(0);
+  const [maxAttempts, setMaxAttempts] = useState(999);
+  const [limitReached, setLimitReached] = useState(false);
 
   const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
@@ -62,6 +66,12 @@ const TextToImageGenerator = () => {
       if (event.data.type === 'shopify:variants' && event.data.variants) {
         console.log("Received variants from Shopify:", event.data.variants);
         setShopifyVariants(event.data.variants);
+      }
+
+      if (event.data.type === 'attempt_count_update') {
+        setAttemptCount(event.data.count || 0);
+        setMaxAttempts(event.data.maxAttempts || 999);
+        setLimitReached(event.data.limitReached || false);
       }
     };
 
@@ -179,6 +189,11 @@ const TextToImageGenerator = () => {
       return;
     }
 
+    if (limitReached) {
+      alert(`Du har brugt dine ${maxAttempts} gratis forsøg. Kontakt os for flere designs!`);
+      return;
+    }
+
     setLoading(true);
 
     const tagString = tags.join(", ");
@@ -216,6 +231,10 @@ const TextToImageGenerator = () => {
         },
         ...prev,
       ]);
+
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'design_generated' }, STORE_ORIGIN);
+      }
     }
 
     setLoading(false);
@@ -237,6 +256,18 @@ const TextToImageGenerator = () => {
               generateImage();
             }}
           >
+            {limitReached && (
+              <Alert variant="warning" className="mb-4">
+                ⚠️ Du har brugt dine {maxAttempts} gratis forsøg. Kontakt os for flere designs!
+              </Alert>
+            )}
+
+            {!limitReached && attemptCount > 0 && (
+              <Alert variant="info" className="mb-4">
+                📊 Forsøg brugt: {attemptCount}/{maxAttempts}
+              </Alert>
+            )}
+
             <Form.Group className="mb-4">
               <Form.Label style={{ fontWeight: "600" }}>👕 Vælg T-shirt farve</Form.Label>
               <div className="d-flex gap-2">
@@ -368,10 +399,12 @@ const TextToImageGenerator = () => {
               <Button
                 variant="success"
                 onClick={generateImage}
-                disabled={loading || !subject || !currentSize}
+                disabled={loading || !subject || !currentSize || limitReached}
               >
                 {loading ? (
                   <Spinner size="sm" animation="border" />
+                ) : limitReached ? (
+                  `Maks forsøg nået (${attemptCount}/${maxAttempts})`
                 ) : (
                   "⚡ Generér design"
                 )}
