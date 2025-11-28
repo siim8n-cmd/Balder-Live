@@ -7,7 +7,6 @@ import {
   Spinner,
   Badge,
   InputGroup,
-  Alert,
 } from "react-bootstrap";
 import ProductMockup from "./ProductMockup";
 
