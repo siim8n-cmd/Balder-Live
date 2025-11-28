@@ -45,7 +45,8 @@
 .generated-design-overlay {
   position: absolute;
   width: 35%;
-  top: 50%;
+  /* CHANGED: Moves design up from stomach (50%) to chest (35%) */
+  top: 35%;
   left: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
