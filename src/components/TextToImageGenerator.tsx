@@ -7,7 +7,7 @@ import {
   Badge,
   InputGroup,
 } from "react-bootstrap";
-import ProductMockup from "./ProductMockup"; // Ensure this component exists in your project
+import ProductMockup from "./ProductMockup";
 
 const STORE_ORIGIN = "https://coolshirts.dk";
 
@@ -45,10 +45,12 @@ const TextToImageGenerator = () => {
   const [currentSize, setCurrentSize] = useState<string>("");
   const [shopifyVariants, setShopifyVariants] = useState<any[]>([]);
   
-  // Defaulting to center since we removed the controls
+  // Default position is "center" since controls are hidden
   const [position, setPosition] = useState<GeneratedImage["position"]>("center");
   
+  // Default blend style
   const [blend] = useState<GeneratedImage["blend"]>("fade");
+  
   const [loading, setLoading] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -296,8 +298,6 @@ const TextToImageGenerator = () => {
               </Form.Select>
             </Form.Group>
 
-            {/* DELETED: Placement buttons (Left Chest / Center) are removed per request */}
-
             <Form.Group className="mb-3">
               <Form.Label>🎯 Motiv / Idé</Form.Label>
               <Form.Control
@@ -406,9 +406,13 @@ const TextToImageGenerator = () => {
 
         <Col md={6} className="d-flex flex-column align-items-center">
           <div className="sticky-top" style={{ top: "20px", zIndex: 100 }}>
+            {/* Fixed props here: passing position and blendStyle */}
             <ProductMockup
               imageUrl={latestImage}
               variant={selectedVariant}
+              position={position}
+              blendStyle={blend}
+              product="tshirt" 
             />
              {loading && (
                 <div className="mt-3 text-center">
