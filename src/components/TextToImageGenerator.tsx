@@ -15,6 +15,7 @@ const STORE_ORIGIN = "https://coolshirts.dk";
 type GeneratedImage = {
   id: string;
   url: string;
+  prompt: string; // Added prompt to the type so we can restore it
   position: "center" | "left-chest" | "bottom";
   blend: "fade" | "gradient" | "circle" | "square" | "none";
 };
@@ -44,7 +45,9 @@ const TextToImageGenerator = () => {
   const [selectedVariant, setSelectedVariant] = useState<TShirtVariant>("White");
   const [currentSize, setCurrentSize] = useState<string>("");
   const [shopifyVariants, setShopifyVariants] = useState<any[]>([]);
-  const [position] = useState<GeneratedImage["position"]>("center");
+  
+  const [position, setPosition] = useState<GeneratedImage["position"]>("center");
+  
   const [blend] = useState<GeneratedImage["blend"]>("fade");
   const [loading, setLoading] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -110,6 +113,7 @@ const TextToImageGenerator = () => {
       quantity: "1",
       "properties[Design URL]": currentDesignUrl,
       "properties[Prompt]": currentPrompt,
+      "properties[Placering]": position === 'left-chest' ? 'Venstre Bryst (Logo)' : 'Midt på Brystet (Stort)',
     });
 
     window.parent.location.href = `${STORE_ORIGIN}/cart/add?${params.toString()}`;
@@ -117,12 +121,20 @@ const TextToImageGenerator = () => {
 
   const handleVariantChange = (variant: TShirtVariant) => {
     setSelectedVariant(variant);
-    console.log(`Color changed to: ${variant}`);
   };
 
   const handleSizeChange = (size: string) => {
     setCurrentSize(size);
-    console.log(`Size changed to: ${size}`);
+  };
+
+  // NEW FUNCTION: Select a previous design
+  const handleSelectDesign = (image: GeneratedImage) => {
+    setCurrentDesignUrl(image.url);
+    setCurrentPrompt(image.prompt); // Restore the prompt for that image
+    setPosition(image.position);    // Restore the position used for that image
+    
+    // Scroll to top to see the selection
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const addTagsFromInput = () => {
@@ -211,6 +223,7 @@ const TextToImageGenerator = () => {
         {
           id: crypto.randomUUID(),
           url: imageUrl,
+          prompt: finalPrompt, // Save the prompt
           position,
           blend,
         },
@@ -225,11 +238,13 @@ const TextToImageGenerator = () => {
     setLoading(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the select handler
     setGeneratedImages((prev) => prev.filter((img) => img.id !== id));
   };
 
-  const latestImage = generatedImages.length > 0 ? generatedImages[0].url : "";
+  // Use currentDesignUrl for the main mockup, fallback to empty if none selected
+  const latestImage = currentDesignUrl;
 
   return (
     <div className="container py-5">
@@ -241,6 +256,8 @@ const TextToImageGenerator = () => {
               generateImage();
             }}
           >
+            {/* ... (Form Controls: Colors, Size, etc. - Same as before) ... */}
+            
             <Form.Group className="mb-4">
               <Form.Label style={{ fontWeight: "600" }}>👕 Vælg T-shirt farve</Form.Label>
               <div className="d-flex gap-2">
@@ -283,6 +300,26 @@ const TextToImageGenerator = () => {
                 <option value="4XL">4XL</option>
                 <option value="5XL">5XL</option>
               </Form.Select>
+            </Form.Group>
+
+            <Form.Group className="mb-4">
+              <Form.Label style={{ fontWeight: "600" }}>📍 Placering af motiv</Form.Label>
+              <div className="d-flex gap-2">
+                <Button
+                  variant={position === "center" ? "primary" : "outline-secondary"}
+                  onClick={() => setPosition("center")}
+                  style={{ flex: 1 }}
+                >
+                  Midt på brystet
+                </Button>
+                <Button
+                  variant={position === "left-chest" ? "primary" : "outline-secondary"}
+                  onClick={() => setPosition("left-chest")}
+                  style={{ flex: 1 }}
+                >
+                  Venstre Bryst (Logo)
+                </Button>
+              </div>
             </Form.Group>
 
             <Form.Group className="mb-3">
@@ -353,9 +390,9 @@ const TextToImageGenerator = () => {
                 </Badge>
               ))}
             </div>
-
-            <Form.Label>✨ Foreslåede tags</Form.Label>
-            <div className="mb-3 d-flex flex-wrap gap-2">
+            
+            {/* Suggested Tags ... */}
+             <div className="mb-3 d-flex flex-wrap gap-2">
               {popularTags.map((tag) => (
                 <Badge
                   key={tag}
@@ -406,13 +443,20 @@ const TextToImageGenerator = () => {
         </Col>
       </Row>
 
-      {generatedImages.length > 1 && (
+      {generatedImages.length > 0 && (
         <>
-          <h5 className="mt-5">🕓 Tidligere designs</h5>
+          <h5 className="mt-5">🕓 Tidligere designs (Klik for at vælge)</h5>
           <div className="row mt-3">
-            {generatedImages.slice(1).map((image) => (
+            {generatedImages.map((image) => (
               <div className="col-md-4 mb-4" key={image.id}>
-                <div className="mockup-card shadow-sm p-3 bg-white rounded position-relative">
+                <div 
+                  className="mockup-card shadow-sm p-3 bg-white rounded position-relative"
+                  style={{ 
+                    cursor: 'pointer', 
+                    border: currentDesignUrl === image.url ? '3px solid #0d6efd' : 'none' 
+                  }}
+                  onClick={() => handleSelectDesign(image)}
+                >
                   <ProductMockup
                     imageUrl={image.url}
                     product="tshirt"
@@ -424,7 +468,7 @@ const TextToImageGenerator = () => {
                     variant="danger"
                     size="sm"
                     className="position-absolute top-0 end-0 m-2"
-                    onClick={() => handleDelete(image.id)}
+                    onClick={(e) => handleDelete(image.id, e)}
                   >
                     ✕
                   </Button>
