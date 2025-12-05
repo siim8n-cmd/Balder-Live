@@ -4,18 +4,17 @@ import {
   Form,
   Row,
   Col,
-  Spinner,
   Badge,
   InputGroup,
 } from "react-bootstrap";
-import ProductMockup from "./ProductMockup";
+import ProductMockup from "./ProductMockup"; // Ensure this component exists in your project
 
 const STORE_ORIGIN = "https://coolshirts.dk";
 
 type GeneratedImage = {
   id: string;
   url: string;
-  prompt: string; // Added prompt to the type so we can restore it
+  prompt: string;
   position: "center" | "left-chest" | "bottom";
   blend: "fade" | "gradient" | "circle" | "square" | "none";
 };
@@ -46,6 +45,7 @@ const TextToImageGenerator = () => {
   const [currentSize, setCurrentSize] = useState<string>("");
   const [shopifyVariants, setShopifyVariants] = useState<any[]>([]);
   
+  // Defaulting to center since we removed the controls
   const [position, setPosition] = useState<GeneratedImage["position"]>("center");
   
   const [blend] = useState<GeneratedImage["blend"]>("fade");
@@ -127,13 +127,10 @@ const TextToImageGenerator = () => {
     setCurrentSize(size);
   };
 
-  // NEW FUNCTION: Select a previous design
   const handleSelectDesign = (image: GeneratedImage) => {
     setCurrentDesignUrl(image.url);
-    setCurrentPrompt(image.prompt); // Restore the prompt for that image
-    setPosition(image.position);    // Restore the position used for that image
-    
-    // Scroll to top to see the selection
+    setCurrentPrompt(image.prompt);
+    setPosition(image.position);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -223,7 +220,7 @@ const TextToImageGenerator = () => {
         {
           id: crypto.randomUUID(),
           url: imageUrl,
-          prompt: finalPrompt, // Save the prompt
+          prompt: finalPrompt,
           position,
           blend,
         },
@@ -239,11 +236,10 @@ const TextToImageGenerator = () => {
   };
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering the select handler
+    e.stopPropagation();
     setGeneratedImages((prev) => prev.filter((img) => img.id !== id));
   };
 
-  // Use currentDesignUrl for the main mockup, fallback to empty if none selected
   const latestImage = currentDesignUrl;
 
   return (
@@ -256,8 +252,6 @@ const TextToImageGenerator = () => {
               generateImage();
             }}
           >
-            {/* ... (Form Controls: Colors, Size, etc. - Same as before) ... */}
-            
             <Form.Group className="mb-4">
               <Form.Label style={{ fontWeight: "600" }}>👕 Vælg T-shirt farve</Form.Label>
               <div className="d-flex gap-2">
@@ -302,25 +296,7 @@ const TextToImageGenerator = () => {
               </Form.Select>
             </Form.Group>
 
-            <Form.Group className="mb-4">
-              <Form.Label style={{ fontWeight: "600" }}>📍 Placering af motiv</Form.Label>
-              <div className="d-flex gap-2">
-                <Button
-                  variant={position === "center" ? "primary" : "outline-secondary"}
-                  onClick={() => setPosition("center")}
-                  style={{ flex: 1 }}
-                >
-                  Midt på brystet
-                </Button>
-                <Button
-                  variant={position === "left-chest" ? "primary" : "outline-secondary"}
-                  onClick={() => setPosition("left-chest")}
-                  style={{ flex: 1 }}
-                >
-                  Venstre Bryst (Logo)
-                </Button>
-              </div>
-            </Form.Group>
+            {/* DELETED: Placement buttons (Left Chest / Center) are removed per request */}
 
             <Form.Group className="mb-3">
               <Form.Label>🎯 Motiv / Idé</Form.Label>
@@ -390,8 +366,7 @@ const TextToImageGenerator = () => {
                 </Badge>
               ))}
             </div>
-            
-            {/* Suggested Tags ... */}
+
              <div className="mb-3 d-flex flex-wrap gap-2">
               {popularTags.map((tag) => (
                 <Badge
@@ -408,75 +383,81 @@ const TextToImageGenerator = () => {
             <div className="d-grid gap-2">
               <Button
                 variant="success"
-                onClick={generateImage}
+                type="submit"
                 disabled={loading || !subject || !currentSize}
+                size="lg"
+                style={{ fontWeight: "600" }}
               >
-                {loading ? (
-                  <Spinner size="sm" animation="border" />
-                ) : (
-                  "⚡ Generér design"
-                )}
+                {loading ? "Genererer..." : "⚡ Generér design"}
               </Button>
-
-              {currentDesignUrl && (
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={addToCart}
-                  disabled={!currentSize}
-                >
-                  🛒 Læg i indkøbskurv
-                </Button>
-              )}
+              
+               <Button
+                variant="primary"
+                onClick={addToCart}
+                disabled={!currentDesignUrl || !currentSize}
+                size="lg"
+                style={{ fontWeight: "600" }}
+              >
+                🛒 Læg i indkøbskurv
+              </Button>
             </div>
           </Form>
         </Col>
 
-        <Col md={6} className="d-flex align-items-center justify-content-center">
-          <ProductMockup
-            imageUrl={latestImage}
-            product="tshirt"
-            position={position}
-            blendStyle={blend}
-            variant={selectedVariant}
-          />
+        <Col md={6} className="d-flex flex-column align-items-center">
+          <div className="sticky-top" style={{ top: "20px", zIndex: 100 }}>
+            <ProductMockup
+              imageUrl={latestImage}
+              variant={selectedVariant}
+            />
+             {loading && (
+                <div className="mt-3 text-center">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                  <p className="mt-2 text-muted">AI'en tryller... vent venligst 🎨</p>
+                </div>
+              )}
+          </div>
         </Col>
       </Row>
 
       {generatedImages.length > 0 && (
-        <>
-          <h5 className="mt-5">🕓 Tidligere designs (Klik for at vælge)</h5>
-          <div className="row mt-3">
-            {generatedImages.map((image) => (
-              <div className="col-md-4 mb-4" key={image.id}>
-                <div 
-                  className="mockup-card shadow-sm p-3 bg-white rounded position-relative"
-                  style={{ 
-                    cursor: 'pointer', 
-                    border: currentDesignUrl === image.url ? '3px solid #0d6efd' : 'none' 
-                  }}
-                  onClick={() => handleSelectDesign(image)}
+        <div className="mt-5">
+          <h3>Dine designs</h3>
+          <div className="d-flex gap-3 overflow-auto py-3">
+            {generatedImages.map((img) => (
+              <div 
+                key={img.id} 
+                className="position-relative" 
+                style={{ 
+                    minWidth: "150px", 
+                    cursor: "pointer",
+                    border: currentDesignUrl === img.url ? "3px solid #0d6efd" : "1px solid #dee2e6",
+                    borderRadius: "8px",
+                    padding: "4px"
+                }}
+                onClick={() => handleSelectDesign(img)}
+              >
+                <img
+                  src={img.url}
+                  alt="Generated design"
+                  className="img-fluid rounded"
+                  style={{ width: "150px", height: "150px", objectFit: "cover" }}
+                />
+                <Button
+                  variant="danger"
+                  size="sm"
+                  className="position-absolute top-0 end-0 m-1 rounded-circle"
+                  style={{ width: "24px", height: "24px", padding: 0, lineHeight: "1" }}
+                  onClick={(e) => handleDelete(img.id, e)}
                 >
-                  <ProductMockup
-                    imageUrl={image.url}
-                    product="tshirt"
-                    position={image.position}
-                    blendStyle={image.blend}
-                    variant={selectedVariant}
-                  />
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    className="position-absolute top-0 end-0 m-2"
-                    onClick={(e) => handleDelete(image.id, e)}
-                  >
-                    ✕
-                  </Button>
-                </div>
+                  ×
+                </Button>
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
