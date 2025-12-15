@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Button,
   Form,
@@ -45,10 +45,7 @@ const TextToImageGenerator = () => {
   const [currentSize, setCurrentSize] = useState<string>("");
   const [shopifyVariants, setShopifyVariants] = useState<any[]>([]);
   
-  // Default position is "center" since controls are hidden
   const [position, setPosition] = useState<GeneratedImage["position"]>("center");
-  
-  // Default blend style
   const [blend] = useState<GeneratedImage["blend"]>("fade");
   
   const [loading, setLoading] = useState(false);
@@ -57,6 +54,9 @@ const TextToImageGenerator = () => {
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [currentDesignUrl, setCurrentDesignUrl] = useState("");
   const [currentPrompt, setCurrentPrompt] = useState("");
+
+  // Ref to manage focus/blur for mobile keyboard
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
@@ -156,35 +156,50 @@ const TextToImageGenerator = () => {
   };
 
   const refinePrompt = async (prompt: string): Promise<string> => {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openaiApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a prompt engineer specialized in AI-generated artwork for t-shirt printing. Rewrite the user's idea into a detailed, visually rich prompt for DALL·E 3. The output should be a centered artwork on a white background, suitable for t-shirt printing. Do NOT include any images of t-shirts or garments. Output only the English prompt.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      }),
-    });
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openaiApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a prompt engineer specialized in AI-generated artwork for t-shirt printing. Rewrite the user's idea into a detailed, visually rich prompt for DALL·E 3. The output should be a centered artwork on a white background, suitable for t-shirt printing. Do NOT include any images of t-shirts or garments. Output only the English prompt.",
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+        }),
+      });
 
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content?.trim() || prompt;
+      if (!response.ok) {
+        console.warn("Prompt refinement failed, using raw prompt");
+        return prompt;
+      }
+
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content?.trim() || prompt;
+    } catch (e) {
+      console.warn("Prompt refinement error:", e);
+      return prompt;
+    }
   };
 
   const generateImage = async () => {
     if (!subject) return;
     
+    // Dismiss mobile keyboard to show loading state
+    if (inputRef.current) {
+        inputRef.current.blur();
+    }
+
     if (!currentSize) {
       alert("Vælg venligst en størrelse først!");
       return;
@@ -192,49 +207,58 @@ const TextToImageGenerator = () => {
 
     setLoading(true);
 
-    const tagString = tags.join(", ");
-    const rawPrompt = `A ${style}, ${mood} artwork for t-shirt print, showing ${subject}. Tags: ${tagString}. High resolution, white background, centered composition. Do not include any t-shirt.`;
-    const finalPrompt = await refinePrompt(rawPrompt);
+    try {
+        const tagString = tags.join(", ");
+        const rawPrompt = `A ${style}, ${mood} artwork for t-shirt print, showing ${subject}. Tags: ${tagString}. High resolution, white background, centered composition. Do not include any t-shirt.`;
+        const finalPrompt = await refinePrompt(rawPrompt);
 
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openaiApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: finalPrompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "standard",
-      }),
-    });
+        const response = await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openaiApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "dall-e-3",
+            prompt: finalPrompt,
+            n: 1,
+            size: "1024x1024",
+            quality: "standard",
+          }),
+        });
+        
+        if (!response.ok) {
+            throw new Error(`OpenAI API Error: ${response.statusText}`);
+        }
 
-    const data = await response.json();
-    const imageUrl = data.data?.[0]?.url;
+        const data = await response.json();
+        const imageUrl = data.data?.[0]?.url;
 
-    if (imageUrl) {
-      setCurrentDesignUrl(imageUrl);
-      setCurrentPrompt(finalPrompt);
-      
-      setGeneratedImages((prev) => [
-        {
-          id: crypto.randomUUID(),
-          url: imageUrl,
-          prompt: finalPrompt,
-          position,
-          blend,
-        },
-        ...prev,
-      ]);
+        if (imageUrl) {
+          setCurrentDesignUrl(imageUrl);
+          setCurrentPrompt(finalPrompt);
+          
+          setGeneratedImages((prev) => [
+            {
+              id: crypto.randomUUID(),
+              url: imageUrl,
+              prompt: finalPrompt,
+              position,
+              blend,
+            },
+            ...prev,
+          ]);
 
-      if (window.parent !== window) {
-        window.parent.postMessage({ type: 'design_generated' }, STORE_ORIGIN);
-      }
+          if (window.parent !== window) {
+            window.parent.postMessage({ type: 'design_generated' }, STORE_ORIGIN);
+          }
+        }
+    } catch (error) {
+        console.error("Genereringsfejl:", error);
+        alert("Der skete en fejl under genereringen. Prøv igen senere.");
+    } finally {
+        setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
@@ -301,10 +325,12 @@ const TextToImageGenerator = () => {
             <Form.Group className="mb-3">
               <Form.Label>🎯 Motiv / Idé</Form.Label>
               <Form.Control
+                ref={inputRef}
                 type="text"
                 placeholder="F.eks. En drage der flyver over en by i solnedgang"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
+                enterKeyHint="go"
               />
             </Form.Group>
 
@@ -388,7 +414,7 @@ const TextToImageGenerator = () => {
                 size="lg"
                 style={{ fontWeight: "600" }}
               >
-                {loading ? "Genererer..." : "⚡ Generér design"}
+                {loading ? "Genererer... (Vent venligst)" : "⚡ Generér design"}
               </Button>
               
                <Button
@@ -406,7 +432,6 @@ const TextToImageGenerator = () => {
 
         <Col md={6} className="d-flex flex-column align-items-center">
           <div className="sticky-top" style={{ top: "20px", zIndex: 100 }}>
-            {/* Fixed props here: passing position and blendStyle */}
             <ProductMockup
               imageUrl={latestImage}
               variant={selectedVariant}
@@ -419,7 +444,7 @@ const TextToImageGenerator = () => {
                   <div className="spinner-border text-primary" role="status">
                     <span className="visually-hidden">Loading...</span>
                   </div>
-                  <p className="mt-2 text-muted">AI'en tryller... vent venligst 🎨</p>
+                  <p className="mt-2 text-muted">AI'en tryller... det kan tage op til 30 sekunder 🎨</p>
                 </div>
               )}
           </div>
