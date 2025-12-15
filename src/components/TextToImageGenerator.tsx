@@ -224,6 +224,8 @@ const TextToImageGenerator = () => {
           headers: {
             Authorization: `Bearer ${openaiApiKey}`,
             "Content-Type": "application/json",
+            "Cache-Control": "no-cache", // Important for iOS
+            "Pragma": "no-cache"
           },
           body: JSON.stringify({
             model: "dall-e-3",
@@ -235,7 +237,14 @@ const TextToImageGenerator = () => {
         });
         
         if (!response.ok) {
-            throw new Error(`OpenAI API Error: ${response.statusText}`);
+            const errorData = await response.json().catch(() => ({}));
+            console.error("OpenAI API Error:", errorData);
+            
+            if (errorData?.error?.code === 'content_policy_violation') {
+                throw new Error("Din tekst overtræder sikkerhedsreglerne. Prøv en anden formulering.");
+            }
+            
+            throw new Error(`Teknisk fejl (${response.status}). Prøv igen.`);
         }
 
         const data = await response.json();
@@ -260,9 +269,17 @@ const TextToImageGenerator = () => {
             window.parent.postMessage({ type: 'design_generated' }, STORE_ORIGIN);
           }
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Genereringsfejl:", error);
-        alert("Der skete en fejl under genereringen. Prøv igen senere.");
+        
+        let msg = "Der skete en fejl under genereringen. Prøv igen senere.";
+        if (error.message && !error.message.includes("fetch")) {
+            msg = error.message;
+        } else if (error.name === 'TypeError' || error.message.includes('fetch')) {
+            msg = "Netværksfejl. Tjek din internetforbindelse.";
+        }
+        
+        alert(msg);
     } finally {
         setLoading(false);
     }
