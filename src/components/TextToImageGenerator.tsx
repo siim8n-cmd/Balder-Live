@@ -55,7 +55,6 @@ const TextToImageGenerator = () => {
   const [currentDesignUrl, setCurrentDesignUrl] = useState("");
   const [currentPrompt, setCurrentPrompt] = useState("");
 
-  // Ref to manage focus/blur for mobile keyboard
   const inputRef = useRef<HTMLInputElement>(null);
 
   const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
@@ -65,7 +64,6 @@ const TextToImageGenerator = () => {
       if (event.origin !== STORE_ORIGIN) return;
       
       if (event.data.type === 'shopify:variants' && event.data.variants) {
-        console.log("Received variants from Shopify:", event.data.variants);
         setShopifyVariants(event.data.variants);
       }
     };
@@ -93,7 +91,6 @@ const TextToImageGenerator = () => {
       v.option1 === shopifyColor && v.option2 === size
     );
     
-    console.log(`Looking for: ${shopifyColor} + ${size}`, variant);
     return variant?.id || null;
   };
 
@@ -169,11 +166,17 @@ const TextToImageGenerator = () => {
             {
               role: "system",
               content:
-                "You are a prompt engineer specialized in AI-generated artwork for t-shirt printing. Rewrite the user's idea into a detailed, visually rich prompt for DALL·E 3. The output should be a centered artwork on a white background, suitable for t-shirt printing. Do NOT include any images of t-shirts or garments. Output only the English prompt.",
+                "You are an expert DALL-E 3 prompt engineer. The user wants a design to print on a t-shirt, but DALL-E often mistakenly generates a picture OF a t-shirt. " +
+                "Your goal is to write a prompt that generates ONLY the raw 2D artwork/graphic itself, isolated on a white background. " +
+                "CRITICAL RULES: \n" +
+                "1. NEVER use words like 't-shirt', 'shirt', 'clothing', 'garment', 'fabric', 'fashion', 'mockup', or 'model' in the final prompt.\n" +
+                "2. Instead, use terms like 'sticker design', 'die-cut sticker', 'isolated vector art', 'digital illustration', 'poster art', or '2D graphic'.\n" +
+                "3. Ensure the background is described as 'pure flat white background'.\n" +
+                "4. Output ONLY the English prompt, no other text."
             },
             {
               role: "user",
-              content: prompt,
+              content: `Create a design based on this idea: "${prompt}". Style: ${style}. Mood: ${mood}.`,
             },
           ],
         }),
@@ -181,7 +184,8 @@ const TextToImageGenerator = () => {
 
       if (!response.ok) {
         console.warn("Prompt refinement failed, using raw prompt");
-        return prompt;
+        // Fallback: If refinement fails, we manually strip "t-shirt" to be safe
+        return prompt.replace(/t-?shirt|clothing|shirt/gi, "artwork");
       }
 
       const data = await response.json();
@@ -195,7 +199,7 @@ const TextToImageGenerator = () => {
   const generateImage = async () => {
     if (!subject) return;
     
-    // Dismiss mobile keyboard to show loading state
+    // Dismiss mobile keyboard
     if (inputRef.current) {
         inputRef.current.blur();
     }
@@ -209,7 +213,10 @@ const TextToImageGenerator = () => {
 
     try {
         const tagString = tags.join(", ");
-        const rawPrompt = `A ${style}, ${mood} artwork for t-shirt print, showing ${subject}. Tags: ${tagString}. High resolution, white background, centered composition. Do not include any t-shirt.`;
+        
+        // Initial raw prompt construction - AVOID "t-shirt" here too
+        const rawPrompt = `A ${style} style, ${mood} mood digital illustration of ${subject}. ${tagString}. Isolated design on white background.`;
+        
         const finalPrompt = await refinePrompt(rawPrompt);
 
         const response = await fetch("https://api.openai.com/v1/images/generations", {
